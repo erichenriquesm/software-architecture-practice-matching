@@ -8,9 +8,18 @@ import { Quantity } from '../../domain/valueObjects/quantity.js';
 import { Side } from '../../domain/valueObjects/side.js';
 import type { Clock } from '../contracts/clock.js';
 import type { IdGenerator } from '../contracts/idGenerator.js';
-import type { ExecuteOrderInput } from '../dtos/executeOrderDto.js';
 import type { BookStore } from './bookStore.js';
-import type { UseCase } from './useCase.js';
+
+/** The order.accepted payload: an order with reserved funds, ready for the book. */
+export interface ExecuteOrderInput {
+  readonly orderId: string;
+  readonly accountId: string;
+  readonly marketId: string;
+  readonly side: string;
+  readonly quantity: string;
+  readonly price: string;
+  readonly acceptedAt: string;
+}
 
 const acceptedAtOf = (value: string): Date => {
   const acceptedAt = new Date(value);
@@ -19,7 +28,7 @@ const acceptedAtOf = (value: string): Date => {
 };
 
 /** Saga S2 step 4 (after the pivot) and saga S3 pivot: the order enters the book and may trade. */
-export class ExecuteOrder implements UseCase<[input: ExecuteOrderInput], void> {
+export class ExecuteOrder {
   constructor(
     private readonly bookStore: BookStore,
     private readonly idGenerator: IdGenerator,

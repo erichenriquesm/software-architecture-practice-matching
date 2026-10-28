@@ -3,7 +3,7 @@ import { createDatabase } from './database/postgres.js';
 import { KyselyOrderBookRepository } from './database/kyselyOrderBookRepository.js';
 import { KyselyTransactionRunner } from './database/kyselyTransactionRunner.js';
 import { HistoryRepublisher } from './messaging/historyRepublisher.js';
-import { matchingEventsExchange } from './messaging/matchingIntegrationEvents.js';
+import { matchingEventsExchange } from './messaging/outboxEventPublisher.js';
 import { connectRabbitMq, rabbitMqUrlFromEnv } from './platform/messaging/connection.js';
 import { postgresSettings } from './settings.js';
 

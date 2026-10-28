@@ -7,7 +7,7 @@ import { OrderBook } from '../../../../src/domain/entities/orderBook.js';
 import { InvalidBookDataError } from '../../../../src/domain/errors.js';
 import type { MarketId } from '../../../../src/domain/valueObjects/marketId.js';
 import { fixedClock, fixedIds } from '../../../fakes/fixedSystem.js';
-import { RecordingDomainEventDispatcher } from '../../../fakes/recordingDomainEventDispatcher.js';
+import { RecordingEventPublisher } from '../../../fakes/recordingEventPublisher.js';
 import { RecordingTransactionRunner } from '../../../fakes/recordingTransactionRunner.js';
 
 /** Keeps one live book per market, like a database that always returns the latest state. */
@@ -37,12 +37,12 @@ const accepted = (orderId: string, accountId: string, side: string, quantity: st
 
 const matchingUseCases = () => {
   const repository = new InMemoryOrderBookRepository();
-  const dispatcher = new RecordingDomainEventDispatcher();
-  const store = new BookStore(repository, new RecordingTransactionRunner(), dispatcher);
+  const publisher = new RecordingEventPublisher();
+  const store = new BookStore(repository, new RecordingTransactionRunner(), publisher);
   const clock = fixedClock(new Date('2026-10-28T12:00:01Z'));
   return {
     repository,
-    dispatcher,
+    publisher,
     executeOrder: new ExecuteOrder(store, fixedIds('0199d5f4-2b9a-7c3e-9a51-00000000000a'), clock),
     removeOrder: new RemoveOrder(store, clock),
   };
@@ -54,7 +54,7 @@ const alice = '0199d5f4-2b9a-7c3e-9a51-0000000000a1';
 const bob = '0199d5f4-2b9a-7c3e-9a51-0000000000b1';
 
 describe('Use case: ExecuteOrder', () => {
-  test('Should place the order, save the book and dispatch the trade and the snapshot', async () => {
+  test('Should place the order, save the book and publish the trade and the snapshot', async () => {
     // Given
     const useCases = matchingUseCases();
     await useCases.executeOrder.execute(accepted(buy, alice, 'buy', '1', '100'));
@@ -63,7 +63,7 @@ describe('Use case: ExecuteOrder', () => {
     await useCases.executeOrder.execute(accepted(sell, bob, 'sell', '1', '100'));
 
     // Then
-    expect(useCases.dispatcher.dispatched.map((event) => event.type)).toEqual(['BookChanged', 'TradeExecuted', 'BookChanged']);
+    expect(useCases.publisher.published.map((event) => event.type)).toEqual(['BookChanged', 'TradeExecuted', 'BookChanged']);
     expect(useCases.repository.saves).toBe(2);
   });
 
@@ -86,6 +86,6 @@ describe('Use case: RemoveOrder', () => {
 
     // Then
     expect(useCases.repository.saves).toBe(0);
-    expect(useCases.dispatcher.dispatched).toMatchObject([{ type: 'OrderCancelRejected', reason: 'NOT_IN_BOOK' }]);
+    expect(useCases.publisher.published).toMatchObject([{ type: 'OrderCancelRejected', reason: 'NOT_IN_BOOK' }]);
   });
 });

@@ -1,6 +1,6 @@
 x-watch: &watch
   watch:
-    - action: sync
+    - action: sync+restart
       path: ../src
       target: /app/src
       ignore: [infra/generated/, infra/schemas/]
@@ -37,7 +37,9 @@ services:
   matching-worker:
     build: { context: .., dockerfile: docker/Dockerfile, target: dev }
     container_name: matching-worker
-    command: ["npx", "tsx", "watch", "src/infra/worker.ts"]
+    # Exits on a lost RabbitMQ connection (no in-process reconnect); outbox + inbox make the restart lossless
+    restart: unless-stopped
+    command: ["npx", "tsx", "src/infra/worker.ts"]
     env_file: ../.env
     ports:
       - "127.0.0.1:3004:3001"

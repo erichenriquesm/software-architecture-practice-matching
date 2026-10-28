@@ -1,6 +1,6 @@
 import type { OrderBook } from '../../domain/entities/orderBook.js';
 import type { MarketId } from '../../domain/valueObjects/marketId.js';
-import type { DomainEventDispatcher } from '../contracts/domainEventDispatcher.js';
+import type { EventPublisher } from '../contracts/eventPublisher.js';
 import type { OrderBookRepository } from '../contracts/orderBookRepository.js';
 import type { TransactionRunner } from '../contracts/transactionRunner.js';
 
@@ -9,7 +9,7 @@ export class BookStore {
   constructor(
     private readonly orderBookRepository: OrderBookRepository,
     private readonly transactionRunner: TransactionRunner,
-    private readonly domainEventDispatcher: DomainEventDispatcher,
+    private readonly eventPublisher: EventPublisher,
   ) {}
 
   change(marketId: MarketId, work: (book: OrderBook) => void): Promise<void> {
@@ -17,7 +17,7 @@ export class BookStore {
       const book = await this.orderBookRepository.load(marketId);
       work(book);
       if (book.hasChanges()) await this.orderBookRepository.save(book);
-      await this.domainEventDispatcher.dispatch(book.pullEvents());
+      await this.eventPublisher.publish(book.pullEvents());
     });
   }
 }

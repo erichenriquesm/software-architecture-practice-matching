@@ -18,7 +18,8 @@ Uma ordem casando, de ponta a ponta:
 2. `src/application/usecases/executeOrder.ts`: carrega o livro, coloca a ordem e salva.
 3. `src/domain/entities/orderBook.ts`: **a regra central**: prioridade preço-tempo, execução parcial em cascata, prevenção de self-trade. Comece a leitura do domínio por aqui.
 4. `src/infra/database/kyselyOrderBookRepository.ts`: grava o livro e os trades no Postgres.
-5. `src/infra/messaging/matchingIntegrationEvents.ts`: transforma os eventos em `matching.tradeExecuted`, `matching.bookSnapshot` etc. e grava no outbox; o worker publica.
+5. `src/application/usecases/bookStore.ts` entrega os eventos do livro ao `EventPublisher`, na mesma transação.
+6. `src/infra/messaging/outboxEventPublisher.ts`: transforma os eventos em `matching.tradeExecuted`, `matching.bookSnapshot` etc. e grava no outbox; o worker publica.
 
 ## API
 
@@ -44,7 +45,7 @@ make clone
 make up
 ```
 
-Containers: `matching-worker` (único processo) · `matching-db`. Portas no host (só para depurar): health 3004 · Postgres 5436.
+Containers: `matching-worker` (único processo; se perder a conexão com o RabbitMQ ele sai e o Docker o reinicia) · `matching-db`. Portas no host (só para depurar): health 3004 · Postgres 5436.
 
 Dentro da pasta do serviço (`backend/matching/`):
 
@@ -59,7 +60,7 @@ Dentro da pasta do serviço (`backend/matching/`):
 ```
 src/
   domain/        regras de negócio (entities, valueObjects, events)
-  application/   casos de uso, DTOs e contratos (interfaces)
+  application/   casos de uso (com seus Input) e contratos (interfaces)
   infra/         HTTP, mensageria, banco, plataforma técnica, schemas de eventos
 test/
   unit/  integration/  fakes/  support/

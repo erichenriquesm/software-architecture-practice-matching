@@ -1,5 +1,4 @@
-import type { ExecuteOrderInput } from '../../../application/dtos/executeOrderDto.js';
-import type { ExecuteOrder } from '../../../application/usecases/executeOrder.js';
+import type { ExecuteOrder, ExecuteOrderInput } from '../../../application/usecases/executeOrder.js';
 import type { RemoveOrder } from '../../../application/usecases/removeOrder.js';
 import type { MessageHandler } from '../../platform/messaging/consumer.js';
 import type { ConsumerQueue } from '../../platform/messaging/topology.js';

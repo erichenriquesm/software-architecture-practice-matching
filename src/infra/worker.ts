@@ -5,13 +5,12 @@ import { createDatabase, PostgresProbe } from './database/postgres.js';
 import { registerHealthRoutes } from './http/health.js';
 import { classifyMatchingFailure } from './messaging/consumers/consumedEvent.js';
 import { marketOrdersHandler, marketOrdersQueue } from './messaging/consumers/marketOrdersConsumer.js';
-import { matchingEventsExchange } from './messaging/matchingIntegrationEvents.js';
+import { matchingEventsExchange } from './messaging/outboxEventPublisher.js';
 import type { AmqpConnection } from './platform/messaging/connection.js';
 import { connectRabbitMq, rabbitMqUrlFromEnv } from './platform/messaging/connection.js';
 import { Consumer } from './platform/messaging/consumer.js';
 import { loadEnvelopeValidator } from './platform/messaging/envelope.js';
 import { OutboxRelay } from './platform/messaging/outbox.js';
-import { ReconnectingConnection } from './platform/messaging/reconnectingConnection.js';
 import { declareConsumerQueue } from './platform/messaging/topology.js';
 import { healthPortSetting, postgresSettings } from './settings.js';
 
@@ -33,36 +32,37 @@ const startMarketConsumer = async (connection: AmqpConnection, marketId: string)
   return consumer;
 };
 
-/** Everything that lives on a broker connection; rebuilt from scratch on every reconnection. */
-const attach = async (connection: AmqpConnection): Promise<() => Promise<void>> => {
-  const relay = new OutboxRelay(db, await connection.createConfirmChannel(), { exchange: matchingEventsExchange, lockKey: outboxLockKey });
-  relay.start();
-  const consumers = await Promise.all(markets.map((marketId) => startMarketConsumer(connection, marketId)));
-  return async () => {
-    relay.stop();
-    await Promise.all(consumers.map((consumer) => consumer.stop().catch(() => undefined)));
-  };
-};
-
-const broker = new ReconnectingConnection({
-  connect: () => connectRabbitMq(rabbitMqUrlFromEnv()),
-  setup: attach,
-  onEvent: (event, detail) => log.info({ event, detail: detail instanceof Error ? detail.message : detail }, 'rabbitmq connection'),
-});
+const connection = await connectRabbitMq(rabbitMqUrlFromEnv());
+let brokerUp = true;
+const relay = new OutboxRelay(db, await connection.createConfirmChannel(), { exchange: matchingEventsExchange, lockKey: outboxLockKey });
+relay.start();
+const consumers = await Promise.all(markets.map((marketId) => startMarketConsumer(connection, marketId)));
 
 const healthServer = Fastify({ logger: false });
-registerHealthRoutes(healthServer, serviceName, [
-  new PostgresProbe(db),
-  { dependency: 'rabbitmq', isHealthy: async () => broker.isConnected() },
-]);
+registerHealthRoutes(healthServer, serviceName, [new PostgresProbe(db), { dependency: 'rabbitmq', isHealthy: async () => brokerUp }]);
 await healthServer.listen({ host: '0.0.0.0', port: healthPortSetting() });
-await broker.start();
 log.info({ markets }, 'matching markets');
 
+let stopping = false;
 const shutdown = async (): Promise<void> => {
-  await broker.stop();
+  stopping = true;
+  relay.stop();
+  await Promise.all(consumers.map((consumer) => consumer.stop().catch(() => undefined)));
+  await connection.close().catch(() => undefined);
   await healthServer.close();
   await db.destroy();
 };
+
+/** No in-process reconnect: on a lost broker connection the worker exits and the container restarts it (outbox + inbox make it lossless). */
+const exitOnBrokerLoss = (reason: unknown): void => {
+  if (stopping) return;
+  brokerUp = false;
+  log.error({ detail: reason instanceof Error ? reason.message : reason }, 'rabbitmq connection lost, exiting');
+  // Exit at once: closing channels on a dead connection can hang, and the outbox + inbox make a hard exit safe.
+  process.exit(1);
+};
+connection.on('error', (error: unknown) => exitOnBrokerLoss(error));
+connection.on('close', () => exitOnBrokerLoss('closed'));
+
 process.once('SIGTERM', shutdown);
 process.once('SIGINT', shutdown);
