@@ -1,8 +1,8 @@
-import type { BookChanged } from '../domainEvents/bookChanged.js';
-import type { DomainEvent } from '../domainEvents/domainEvent.js';
-import type { OrderCancelRejected } from '../domainEvents/orderCancelRejected.js';
-import type { OrderRemoved, RemovalReason } from '../domainEvents/orderRemoved.js';
-import type { TradeExecuted } from '../domainEvents/tradeExecuted.js';
+import type { BookChanged } from '../events/bookChanged.js';
+import type { DomainEvent } from '../events/domainEvent.js';
+import type { OrderCancelRejected } from '../events/orderCancelRejected.js';
+import type { OrderRemoved, RemovalReason } from '../events/orderRemoved.js';
+import type { TradeExecuted } from '../events/tradeExecuted.js';
 import type { AccountId } from '../valueObjects/accountId.js';
 import type { MarketId } from '../valueObjects/marketId.js';
 import type { OrderId } from '../valueObjects/orderId.js';
