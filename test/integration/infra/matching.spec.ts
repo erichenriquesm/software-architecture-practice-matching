@@ -139,7 +139,7 @@ describe('matching.orders.<market> consumer', () => {
       'matching.orderRemoved.BTC-USD',
       'matching.bookSnapshot.BTC-USD',
     ]);
-    const validateTrade = loadSchemaValidator('src/infra/contracts/published/events/matching.tradeExecuted.v1.schema.json');
+    const validateTrade = loadSchemaValidator('src/infra/schemas/published/events/matching.tradeExecuted.v1.schema.json');
     expect(validateTrade(outbox[1]?.[1])).toMatchObject({ buyOrderId: buyId, sellOrderId: sellId, side: 'sell', price: '100.00000000' });
     expect(outbox[4]?.[1]).toMatchObject({ orderId: restId, reason: 'CANCELLED', remainingQuantity: '2.00000000' });
     await consumer.stop();

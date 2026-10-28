@@ -19,7 +19,7 @@ export interface RepublishResult {
   readonly snapshots: number;
 }
 
-const validatorOf = (type: string) => loadSchemaValidator<Record<string, unknown>>(`src/infra/contracts/published/events/${type}.v1.schema.json`);
+const validatorOf = (type: string) => loadSchemaValidator<Record<string, unknown>>(`src/infra/schemas/published/events/${type}.v1.schema.json`);
 
 const tradePayload = (row: Selectable<TradeTable>) => ({
   tradeId: row.trade_id,

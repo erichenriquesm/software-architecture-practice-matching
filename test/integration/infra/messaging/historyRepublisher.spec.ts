@@ -93,7 +93,7 @@ describe('HistoryRepublisher', () => {
       'matching.replay.bookSnapshot.BTC-USD',
       'matching.replay.completed',
     ]);
-    const validateTrade = loadSchemaValidator('src/infra/contracts/published/events/matching.tradeExecuted.v1.schema.json');
+    const validateTrade = loadSchemaValidator('src/infra/schemas/published/events/matching.tradeExecuted.v1.schema.json');
     expect(messages.slice(0, 3).map((message) => validateTrade(message.envelope.payload))).toMatchObject([
       { price: '100.00000000', bookSequence: 3, executedAt: '2026-10-28T12:00:03.000Z' },
       { price: '101.00000000', bookSequence: 3 },

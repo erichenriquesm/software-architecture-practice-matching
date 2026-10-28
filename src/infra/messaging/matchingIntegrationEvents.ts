@@ -19,7 +19,7 @@ interface MarketEvent extends DomainEvent {
 
 /** Maps a domain event to its published contract and writes it to the outbox, routed by market. */
 const publisher = <TEvent extends MarketEvent>(runner: KyselyTransactionRunner<Database>, type: string, payloadOf: (event: TEvent) => Record<string, unknown>) => {
-  const validate = loadSchemaValidator<Record<string, unknown>>(`src/infra/contracts/published/events/${type}.v1.schema.json`);
+  const validate = loadSchemaValidator<Record<string, unknown>>(`src/infra/schemas/published/events/${type}.v1.schema.json`);
   return async (event: TEvent): Promise<void> => {
     const correlation = currentCorrelation();
     const envelope = createEnvelope(

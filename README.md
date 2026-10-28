@@ -10,6 +10,16 @@ Mantém o livro de ofertas de cada mercado: a melhor compra casa com a melhor ve
 
 A especificação completa (modelo, casos de uso, dados, testes) está na spec do serviço: [`sdd/services/matching.md`](https://github.com/erichenriquesm/software-architecture-practice/blob/main/sdd/services/matching.md). As regras de arquitetura valem para todos os serviços: [`sdd/01-principios.md`](https://github.com/erichenriquesm/software-architecture-practice/blob/main/sdd/01-principios.md).
 
+## Comece por aqui
+
+Uma ordem casando, de ponta a ponta:
+
+1. `src/infra/messaging/consumers/marketOrdersConsumer.ts`: recebe `order.accepted` da fila do mercado, uma mensagem por vez.
+2. `src/application/usecases/executeOrder.ts`: carrega o livro, coloca a ordem e salva.
+3. `src/domain/entities/orderBook.ts`: **a regra central**: prioridade preço-tempo, execução parcial em cascata, prevenção de self-trade. Comece a leitura do domínio por aqui.
+4. `src/infra/database/kyselyOrderBookRepository.ts`: grava o livro e os trades no Postgres.
+5. `src/infra/messaging/matchingIntegrationEvents.ts`: transforma os eventos em `matching.tradeExecuted`, `matching.bookSnapshot` etc. e grava no outbox; o worker publica.
+
 ## API
 
 Não tem API pública: só o `/health` do worker.
@@ -21,7 +31,7 @@ Não tem API pública: só o `/health` do worker.
 - **Publica:** `matching.tradeExecuted.<mercado>`, `matching.orderRemoved.<mercado>`, `matching.orderCancelRejected.<mercado>`, `matching.bookSnapshot.<mercado>`
 - **Consome:** `order.accepted`, `order.cancelRequested` (uma fila `matching.orders.<mercado>` por mercado, um consumidor ativo por vez)
 
-Os contratos ficam em `src/infra/contracts/`: `published/` (este serviço é o dono) e `consumed/` (cópias do que ele consome, conferidas pelo `make check` do repositório guarda-chuva).
+Os contratos ficam em `src/infra/schemas/`: `published/` (este serviço é o dono) e `consumed/` (cópias do que ele consome, conferidas pelo `make check` do repositório guarda-chuva).
 
 ## Como rodar
 
@@ -48,9 +58,9 @@ Dentro da pasta do serviço (`backend/matching/`):
 
 ```
 src/
-  domain/        regras de negócio (entities, valueObjects, events, services)
+  domain/        regras de negócio (entities, valueObjects, events)
   application/   casos de uso, DTOs e contratos (interfaces)
-  infra/         HTTP, mensageria, banco, plataforma técnica, contratos de eventos
+  infra/         HTTP, mensageria, banco, plataforma técnica, schemas de eventos
 test/
   unit/  integration/  fakes/  support/
 docker/          Dockerfile e composes (só para ambiente local)
