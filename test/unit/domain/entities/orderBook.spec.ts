@@ -218,3 +218,26 @@ describe('OrderBook: invariants under random orders', () => {
     }
   });
 });
+
+describe('OrderBook: levels', () => {
+  test('Should give both sides aggregated by exact price, in priority order, as the snapshot publishes them', () => {
+    // Given
+    const { book, place } = newBook();
+    place(order(alice, 'buy', '1', '99'));
+    place(order(bob, 'buy', '2', '100'));
+    place(order(carol, 'buy', '3', '100'));
+    place(order(alice, 'sell', '4', '105'));
+
+    // When
+    const levels = book.levels();
+
+    // Then
+    expect(levels).toEqual({
+      bids: [
+        { price: '100.00000000', quantity: '5.00000000' },
+        { price: '99.00000000', quantity: '1.00000000' },
+      ],
+      asks: [{ price: '105.00000000', quantity: '4.00000000' }],
+    });
+  });
+});

@@ -19,7 +19,8 @@
     "migrate:rollback": "tsx src/infra/migrate.ts rollback",
     "migrate:status": "tsx src/infra/migrate.ts status",
     "migrate:fresh": "tsx src/infra/migrate.ts fresh",
-    "make:migration": "tsx src/infra/migrate.ts make"
+    "make:migration": "tsx src/infra/migrate.ts make",
+    "history:republish": "tsx src/infra/republish.ts"
   },
   "dependencies": {
     "ajv": "8.20.0",

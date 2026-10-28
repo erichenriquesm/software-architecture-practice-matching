@@ -6,6 +6,8 @@
 #   make migrate-status                  list every migration and whether it ran
 #   make migrate-fresh                   drop every table and migrate again
 #   make migration name=create_x_table   create src/infra/database/migrations/<timestamp>_create_x_table.ts
+#   make history-republish               republish every trade and book snapshot on matching.replay.*, for market-data
+#                                        to rebuild its projections (use make projections-rebuild in backend/)
 #   make deps                            install node_modules and generate the gRPC code on your machine, for the editor
 #
 # Tests (all in containers; the platform does not need to be up):
@@ -16,7 +18,7 @@
 COMPOSE = docker compose -f ../docker-compose.yml
 MIGRATIONS = src/infra/database/migrations
 
-.PHONY: migrate migrate-rollback migrate-status migrate-fresh migration deps test test-unit test-integration
+.PHONY: migrate migrate-rollback migrate-status migrate-fresh migration history-republish deps test test-unit test-integration
 
 migrate:
 	$(COMPOSE) exec matching-worker npm run --silent migrate
@@ -33,6 +35,9 @@ migrate-fresh:
 migration:
 	@test -n "$(name)" || (echo "usage: make migration name=create_x_table" && exit 1)
 	$(COMPOSE) run --rm --no-deps -v $(CURDIR)/$(MIGRATIONS):/app/$(MIGRATIONS) matching-worker npm run --silent make:migration -- $(name)
+
+history-republish:
+	$(COMPOSE) exec matching-worker npm run --silent history:republish
 
 # The editor reads node_modules and src/infra/generated from this folder; both are produced inside a
 # container (same Node and protoc as the image), so nothing has to be installed on the host.

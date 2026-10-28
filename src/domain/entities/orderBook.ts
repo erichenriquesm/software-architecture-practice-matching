@@ -12,6 +12,7 @@ import type { Side } from '../valueObjects/side.js';
 import type { Trade } from '../valueObjects/trade.js';
 import { AggregateRoot } from './aggregateRoot.js';
 import { BookEntry } from './bookEntry.js';
+import type { BookLevel } from './bookSide.js';
 import { BookSide } from './bookSide.js';
 
 export interface IncomingOrder {
@@ -21,6 +22,11 @@ export interface IncomingOrder {
   readonly quantity: Quantity;
   readonly price: Price;
   readonly acceptedAt: Date;
+}
+
+export interface BookLevels {
+  readonly bids: BookLevel[];
+  readonly asks: BookLevel[];
 }
 
 export interface OrderBookSnapshot {
@@ -68,6 +74,11 @@ export class OrderBook extends AggregateRoot<DomainEvent> {
 
   get nextPriority(): number {
     return this.nextPriorityNumber;
+  }
+
+  /** Quantity per exact price on each side, in priority order: what bookSnapshot publishes. */
+  levels(): BookLevels {
+    return { bids: this.bids.levels(), asks: this.asks.levels() };
   }
 
   isNew(): boolean {
@@ -203,8 +214,7 @@ export class OrderBook extends AggregateRoot<DomainEvent> {
       type: 'BookChanged',
       marketId: this.marketId.value,
       sequence: this.sequenceNumber,
-      bids: this.bids.levels(),
-      asks: this.asks.levels(),
+      ...this.levels(),
       occurredAt: now,
     };
     this.recordEvent(event);
